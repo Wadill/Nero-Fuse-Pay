@@ -1,29 +1,31 @@
 import { App } from "konsta/react";
 import "@/styles/globals.css";
 import { useEffect, useState } from "react";
-
 import "@rainbow-me/rainbowkit/styles.css";
 
+// NERO-specific imports
+import { NEROProvider, createPaymasterMiddleware } from '@nerochain/aa-sdk';
 import { getDefaultWallets, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { celo, celoAlfajores } from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
+import { nerochain } from '@/utils/chains'; // Your NERO chain config
 
+// Configure only NERO chain
 const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [
-    celo,
-    celoAlfajores,
-    ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === "true"
-      ? [celoAlfajores]
-      : []),
-  ],
-  [publicProvider()],
+  [nerochain],
+  [publicProvider()]
 );
 
 const { connectors } = getDefaultWallets({
-  appName: "Fuse Pay",
-  projectId: "063d0bf7cbe66b2e8291f29dc850fb19",
+  appName: "Nero-Fuse-Pay",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, // Use env variable
   chains,
+});
+
+// NERO Paymaster middleware
+const paymasterMiddleware = createPaymasterMiddleware({
+  paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER_URL,
+  chainId: nerochain.id,
 });
 
 const wagmiConfig = createConfig({
@@ -31,6 +33,7 @@ const wagmiConfig = createConfig({
   connectors,
   publicClient,
   webSocketPublicClient,
+  middleware: [paymasterMiddleware], // Apply to all operations
 });
 
 function MyApp({ Component, pageProps }) {
@@ -38,27 +41,28 @@ function MyApp({ Component, pageProps }) {
 
   useEffect(() => {
     const userAgent = navigator.userAgent;
-
     const isAndroid = userAgent.match(/Android/i);
     const isIOS = userAgent.match(/iPhone|iPad|iPod/i);
-    const isLaptop = !isAndroid && !isIOS;
-
-    if (isAndroid) {
-      setDeviceType("android");
-    } else if (isIOS) {
-      setDeviceType("ios");
-    } else {
-      setDeviceType("laptop");
-    }
+    
+    setDeviceType(isIOS ? "ios" : isAndroid ? "android" : "laptop");
   }, []);
+
   const theme = deviceType === "ios" ? "ios" : "material";
 
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
-        <App dark={true} safeAreas={true} theme={theme}>
-          <Component {...pageProps} />
-        </App>
+        <NEROProvider
+          paymasterConfig={{
+            chainId: nerochain.id,
+            policy: 'payroll',
+            sponsorshipType: 'full' // Full gas sponsorship
+          }}
+        >
+          <App dark={true} safeAreas={true} theme={theme}>
+            <Component {...pageProps} />
+          </App>
+        </NEROProvider>
       </RainbowKitProvider>
     </WagmiConfig>
   );
