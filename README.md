@@ -1,7 +1,5 @@
 # Nero-Fuse-Pay - Decentralized Payroll Platform with Account Abstraction
 
-![Nero Chain Paymaster Integration Diagram](https://i.imgur.com/example-diagram.png)
-
 Nero-Fuse-Pay is a next-generation decentralized payroll platform that leverages NERO Chain's Account Abstraction (AA) platform to create seamless, gasless payroll experiences. Built specifically for NERO Chain's WaveHack, this platform enables businesses to manage payroll while giving employees Web2-like simplicity with Web3 benefits.
 
 ## Key Innovations
