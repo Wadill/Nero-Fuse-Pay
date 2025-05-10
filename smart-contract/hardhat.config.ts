@@ -1,52 +1,48 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
-import * as dotenv from "dotenv";
-dotenv.config();
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
-const config: HardhatUserConfig = {
-  solidity: "0.8.24",
+module.exports = {
+  solidity: "0.8.20",
   networks: {
-    alfajores: {
-      url: "https://alfajores-forno.celo-testnet.org",
-      accounts:
-        process.env.PRIVATE_HASH !== undefined
-          ? [process.env.PRIVATE_HASH]
-          : [],
-      chainId: 44787,
+    nero: {
+      url: process.env.NERO_RPC_URL || "https://rpc.nerochain.io",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1234, // Replace with actual NERO chain ID
     },
-    celo: {
-      url: "https://forno.celo.org",
-      accounts:
-        process.env.PRIVATE_HASH !== undefined
-          ? [process.env.PRIVATE_HASH]
-          : [],
-      chainId: 42220,
+    neroTestnet: {
+      url: process.env.NERO_TESTNET_RPC_URL || "https://testnet.rpc.nerochain.io",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 5678, // Replace with actual testnet ID
     },
   },
   etherscan: {
     apiKey: {
-        alfajores: "7M5Y1J1CE5FT66EKD1M4DBSJKVZ6WH7Y43",
-        celo: "7M5Y1J1CE5FT66EKD1M4DBSJKVZ6WH7Y43"
+      nero: process.env.NERO_SCAN_API_KEY || "UNSET",
+      neroTestnet: process.env.NERO_SCAN_API_KEY || "UNSET",
     },
     customChains: [
-        {
-            network: "alfajores",
-            chainId: 44787,
-            urls: {
-                apiURL: "https://api-alfajores.celoscan.io/api",
-                browserURL: "https://alfajores.celoscan.io",
-            },
-        },
-        {
-            network: "celo",
-            chainId: 42220,
-            urls: {
-                apiURL: "https://api.celoscan.io/api",
-                browserURL: "https://celoscan.io/",
-            },
-        },
+      {
+        network: "nero",
+        chainId: 1689,
+        urls: {
+          apiURL: "https://api.scan.nerochain.io/api",
+          browserURL: "https://scan.nerochain.io"
+        }
+      },
+      {
+        network: "neroTestnet",
+        chainId: 5678,
+        urls: {
+          apiURL: "https://api.testnet.scan.nerochain.io/api",
+          browserURL: "https://testnet.scan.nerochain.io"
+        }
+      }
     ]
-},
+  },
+  paths: {
+    artifacts: "./artifacts",
+    cache: "./cache",
+    sources: "./contracts",
+    tests: "./test"
+  }
 };
-
-export default config;

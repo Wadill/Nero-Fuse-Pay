@@ -1,38 +1,71 @@
 import * as dotenv from "dotenv";
 import * as hre from "hardhat";
+import { EntryPoint__factory } from "@nerochain/aa-contracts";
 dotenv.config();
 
 async function main() {
-  console.log("Deploying FusePayManager Contract...");
+  console.log("Deploying Nero-Fuse-Pay Contracts...");
 
-  // here we deploy the contract    0xBec8bD44efA8f0a837F5f8395258b6Ed4e59aBF4
-  const FusePayManagerContract =
-    await hre.ethers.deployContract("FusePayManager");
+  const [deployer] = await hre.ethers.getSigners();
+  console.log("Deploying contracts with account:", deployer.address);
 
-  await FusePayManagerContract.waitForDeployment();
+  // 1. Deploy EntryPoint (or use existing NERO EntryPoint)
+  console.log("\nDeploying/Connecting EntryPoint...");
+  const ENTRY_POINT_ADDRESS = process.env.ENTRY_POINT_ADDRESS || "";
+  
+  let entryPoint;
+  if (ENTRY_POINT_ADDRESS) {
+    entryPoint = EntryPoint__factory.connect(ENTRY_POINT_ADDRESS, deployer);
+    console.log("Using existing EntryPoint at:", ENTRY_POINT_ADDRESS);
+  } else {
+    const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
+    entryPoint = await EntryPoint.deploy();
+    await entryPoint.waitForDeployment();
+    console.log("EntryPoint deployed to:", await entryPoint.getAddress());
+  }
 
-  // print the address of the deployed contract
+  // 2. Deploy Paymaster Contract
+  console.log("\nDeploying NeroPaymaster...");
+  const NeroPaymaster = await hre.ethers.getContractFactory("NeroPaymaster");
+  const paymaster = await NeroPaymaster.deploy(await entryPoint.getAddress());
+  await paymaster.waitForDeployment();
+  console.log("NeroPaymaster deployed to:", await paymaster.getAddress());
+
+  // 3. Deploy Main Payroll Contract
+  console.log("\nDeploying NeroPayroll...");
+  const NeroPayroll = await hre.ethers.getContractFactory("NeroPayroll");
+  const payroll = await NeroPayroll.deploy(
+    await entryPoint.getAddress(),
+    await paymaster.getAddress()
+  );
+  await payroll.waitForDeployment();
+  console.log("NeroPayroll deployed to:", await payroll.getAddress());
+
+  // 4. Initialize Paymaster
+  console.log("\nConfiguring Paymaster...");
+  await paymaster.initialize(payroll.getAddress());
+  console.log("Paymaster initialized with Payroll contract");
+
+  // 5. Verification preparation
+  console.log("\nVerification commands:");
+  if (!ENTRY_POINT_ADDRESS) {
+    console.log(
+      `npx hardhat verify --network nero ${await entryPoint.getAddress()}`
+    );
+  }
   console.log(
-    "FusePay Manager Contract Address: ",
-    FusePayManagerContract.target,
+    `npx hardhat verify --network nero ${await paymaster.getAddress()} ${await entryPoint.getAddress()}`
+  );
+  console.log(
+    `npx hardhat verify --network nero ${await payroll.getAddress()} ${await entryPoint.getAddress()} ${await paymaster.getAddress()}`
   );
 
-  //   console.log("Sleeping.....");
-  // Wait for etherscan to notice that the contract has been deployed
-  //   await sleep(30000);
-
-  // Verify the contract after deploying
-  //   await hre.run("verify:verify", {
-  //     address: FusePayManagerContract.target,
-  //     constructorArguments: [],
-  //   });
+  console.log("\nDeployment Summary:");
+  console.log("EntryPoint:", await entryPoint.getAddress());
+  console.log("NeroPaymaster:", await paymaster.getAddress());
+  console.log("NeroPayroll:", await payroll.getAddress());
 }
-// function sleep(ms: any) {
-//   return new Promise((resolve) => setTimeout(resolve, ms));
-// }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
